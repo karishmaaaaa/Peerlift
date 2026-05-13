@@ -1,0 +1,28 @@
+node_modules
+npm-debug.log
+.next
+.git
+.gitignore
+README.md
+ARCHITECTURE.md
+QUICK_START.md
+START_HERE.md
+BUILD_SUMMARY.md
+DOCUMENTATION_INDEX.md
+.env.local
+.env.*.local
+
+# Ignore backend and other apps
+apps/backend
+packages
+v0_plans
+.vscode
+.idea
+*.swp
+*.swo
+.DS_Store
+
+# Ignore database files
+prisma
+*.sqlite
+*.db

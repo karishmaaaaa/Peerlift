@@ -1,0 +1,6 @@
+{
+  "version": 2,
+  "buildCommand": "pnpm --filter ./apps/frontend run build",
+  "outputDirectory": "apps/frontend/.next",
+  "installCommand": "pnpm install --frozen-lockfile"
+}

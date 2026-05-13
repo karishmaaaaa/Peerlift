@@ -1,0 +1,285 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Enums
+enum UserRole {
+  ADMIN
+  NGO_COORDINATOR
+  TEACHER
+  MENTOR
+  STUDENT
+}
+
+enum OrganizationType {
+  NGO
+  SCHOOL
+  GOVERNMENT
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum DifficultyLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum SessionStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum NotificationType {
+  GOAL_MILESTONE
+  RISK_ALERT
+  MENTORSHIP_SESSION
+  LEARNING_ACHIEVEMENT
+  SYSTEM_ALERT
+}
+
+// Models
+model Organization {
+  id        String    @id @default(cuid())
+  name      String
+  type      OrganizationType
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  schools    School[]
+  users      User[]
+  auditLogs  AuditLog[]
+
+  @@index([type])
+}
+
+model School {
+  id             String    @id @default(cuid())
+  organizationId String
+  name           String
+  district       String
+  state          String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  users        User[]
+
+  @@index([organizationId])
+  @@index([district])
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  passwordHash   String
+  firstName      String
+  lastName       String
+  role           UserRole
+  schoolId       String?
+  organizationId String
+  avatar         String?
+  emailVerified  Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  school         School?                @relation(fields: [schoolId], references: [id], onDelete: SetNull)
+  organization   Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  // Financial relations
+  transactions   Transaction[]
+  savingsGoals   SavingsGoal[]
+  
+  // AI relations
+  insights       FinancialInsight[]
+  
+  // Learning relations
+  progress       UserProgress[]
+  
+  // Mentorship relations (as mentor)
+  mentoredSessions MentorshipSession[] @relation("mentor")
+  
+  // Mentorship relations (as student)
+  mentorshipSessions MentorshipSession[] @relation("student")
+  
+  // Notifications
+  notifications  Notification[]
+  
+  // Audit logs
+  auditLogs      AuditLog[]
+
+  @@index([organizationId])
+  @@index([schoolId])
+  @@index([role])
+  @@index([email])
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  userId      String
+  amount      Float
+  category    String
+  description String?
+  date        DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([date])
+  @@index([category])
+}
+
+model SavingsGoal {
+  id            String   @id @default(cuid())
+  userId        String
+  goalName      String
+  targetAmount  Float
+  currentAmount Float   @default(0)
+  deadline      DateTime
+  completed     Boolean @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([deadline])
+}
+
+model FinancialInsight {
+  id          String    @id @default(cuid())
+  userId      String
+  insight     String    @db.LongText
+  riskLevel   RiskLevel
+  aiModel     String
+  metadata    String?   @db.Json
+  generatedAt DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([riskLevel])
+  @@index([generatedAt])
+}
+
+model LearningModule {
+  id            String          @id @default(cuid())
+  title         String
+  description   String          @db.LongText
+  content       String          @db.LongText
+  difficulty    DifficultyLevel
+  estimatedTime Int             // in minutes
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  userProgress UserProgress[]
+
+  @@index([difficulty])
+}
+
+model UserProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  moduleId    String
+  completed   Boolean  @default(false)
+  score       Int?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module LearningModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, moduleId])
+  @@index([userId])
+  @@index([moduleId])
+  @@index([completed])
+}
+
+model MentorshipSession {
+  id        String        @id @default(cuid())
+  mentorId  String
+  studentId String
+  topic     String
+  notes     String?       @db.LongText
+  feedback  String?       @db.LongText
+  status    SessionStatus @default(SCHEDULED)
+  sessionDate DateTime
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  mentor User @relation("mentoredSessions", fields: [mentorId], references: [id], onDelete: Cascade)
+  student User @relation("mentorshipSessions", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([mentorId])
+  @@index([studentId])
+  @@index([status])
+  @@index([sessionDate])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String           @db.LongText
+  isRead    Boolean          @default(false)
+  metadata  String?          @db.Json
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id            String   @id @default(cuid())
+  userId        String
+  organizationId String
+  action        String
+  entityType    String
+  entityId      String?
+  changes       String?  @db.Json
+  createdAt     DateTime @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([createdAt])
+  @@index([action])
+}
+
+model SystemMetrics {
+  id           String   @id @default(cuid())
+  apiLatency   Float    // in milliseconds
+  aiLatency    Float    // in milliseconds
+  activeUsers  Int
+  requestCount Int
+  generatedAt  DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  @@index([generatedAt])
+}

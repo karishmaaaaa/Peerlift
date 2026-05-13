@@ -1,0 +1,32 @@
+{
+  "name": "peerlift",
+  "version": "1.0.0",
+  "description": "Production-grade EdTech + FinTech SaaS platform for financial literacy and peer mentorship",
+  "private": true,
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter ./apps/* --parallel run dev",
+    "build": "pnpm --filter ./apps/frontend run build",
+    "build:all": "pnpm --filter ./apps/* run build",
+    "start": "pnpm --filter ./apps/frontend run start",
+    "start:backend": "pnpm --filter ./apps/backend run start",
+    "lint": "pnpm --filter ./apps/* run lint",
+    "test": "pnpm --filter ./apps/* run test",
+    "db:push": "cd apps/backend && npx prisma db push",
+    "db:migrate": "cd apps/backend && npx prisma migrate dev",
+    "db:seed": "cd apps/backend && npx ts-node prisma/seed.ts",
+    "db:studio": "cd apps/backend && npx prisma studio"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "devDependencies": {
+    "prettier": "^3.2.5",
+    "eslint": "^9.0.0",
+    "typescript": "^5.7.0"
+  }
+}
